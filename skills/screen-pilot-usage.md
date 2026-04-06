@@ -1,128 +1,89 @@
+---
+name: screen-pilot
+description: Desktop vision and control via screen-pilot MCP server. Take real screenshots, click, type, scroll, drag, detect UI elements with AI vision, and run autonomous desktop tasks. Works with any application on the desktop without needing a browser engine.
+version: 1.0.0
+author: clintm
+license: MIT
+metadata:
+  hermes:
+    tags: [MCP, Desktop, Automation, Vision, Screen Control]
+    related_skills: [native-mcp]
+---
+
 # screen-pilot: Desktop Vision & Control
 
-## When to Use This Skill
+screen-pilot controls the **real desktop** — the actual screen, mouse, and keyboard at the OS level. It works with every application: browsers (Brave, Firefox, etc.), terminals, file managers, settings panels, native apps, dialogs, and anything else visible on screen.
 
-Use screen-pilot when you need to **see or interact with the desktop** — clicking buttons, typing text, reading what's on screen, opening applications, navigating GUIs, or automating any visual desktop task.
+## When to Use screen-pilot
 
-**DO NOT use Playwright, Puppeteer, or browser automation tools for desktop tasks.** screen-pilot controls the real desktop directly via the kernel input layer. It works with ALL applications — browsers, terminals, file managers, settings, everything.
+Use screen-pilot when you need to:
+- **See the screen** — take a real screenshot of whatever is currently visible
+- **Interact with any desktop application** — click buttons, type text, press keys, scroll
+- **Navigate a browser that's already installed** — Brave, Firefox, or whatever the user has
+- **Open applications** — press Super to open the launcher, type the app name, press Enter
+- **Automate GUI tasks** — fill forms, navigate menus, adjust settings, drag files
 
-**Use screen-pilot instead of Playwright when:**
-- The user asks you to interact with ANY desktop application
-- You need to open, click, or type into a GUI application
-- You need to see what's currently on screen
-- You need to navigate menus, dialogs, or system settings
-- You need to interact with a browser that's already open (Brave, Firefox, etc.)
+### screen-pilot vs browser tools
 
-**Use Playwright/browser tools ONLY when:**
-- You need headless web scraping with no visible browser
-- You need to programmatically extract structured data from web pages
-- The task is purely about web content, not desktop interaction
+| Capability | screen-pilot | Browser tools (Playwright, etc.) |
+|---|---|---|
+| Works with any desktop app | Yes | No (browser only) |
+| Needs Chromium installed | No | Yes |
+| Works with user's existing browser | Yes (Brave, Firefox, etc.) | No (uses own Chromium) |
+| Sees real screen state | Yes | No (headless render) |
+| Controls mouse/keyboard | Yes (OS-level) | No (DOM-level) |
 
-## Available Tools
+**Use screen-pilot** for desktop GUI interaction. **Use browser tools** only for headless web scraping where you don't need a visible browser.
 
-screen-pilot provides these MCP tools:
+## Tools
 
-### Looking at the Screen
+| Tool | What it does |
+|------|-------------|
+| `mcp_screen-pilot_screenshot` | Capture the real desktop screen as PNG |
+| `mcp_screen-pilot_click` | Click at screen coordinates (any app) |
+| `mcp_screen-pilot_type_text` | Type text into the focused field/app |
+| `mcp_screen-pilot_press_key` | Press key combos: `super`, `ctrl+t`, `ctrl+l`, `Return` |
+| `mcp_screen-pilot_scroll` | Scroll up/down at a position |
+| `mcp_screen-pilot_drag` | Drag from one point to another |
+| `mcp_screen-pilot_hover` | Move mouse without clicking |
+| `mcp_screen-pilot_wait` | Pause then screenshot (for load times) |
+| `mcp_screen-pilot_detect_ui_elements` | AI vision to find clickable elements |
+| `mcp_screen-pilot_desktop_task` | Autonomous task loop (needs local LLM) |
 
-- **`screenshot`** — Capture the full screen. Returns base64 PNG. Always do this first to understand what's visible.
-- **`detect_ui_elements`** — Run AI detection on the screen to find clickable buttons, icons, and interactive elements with their coordinates.
+## Usage Pattern
 
-### Controlling Input
-
-- **`click`** — Click at screen coordinates (x, y). Supports left/right/middle button, double-click, and modifier keys (ctrl, shift, alt). Returns whether the screen changed after clicking.
-- **`type_text`** — Type a string at the current cursor position. Click a text field first, then type into it.
-- **`press_key`** — Press a key combination. Examples: `super` (open app launcher), `ctrl+t` (new tab), `Return` (enter), `alt+F4` (close window), `ctrl+l` (focus URL bar).
-- **`scroll`** — Scroll up or down at a screen position.
-- **`drag`** — Click and drag from one position to another (for drag-and-drop, resizing, selecting).
-- **`hover`** — Move mouse without clicking (for tooltips, dropdown menus).
-- **`wait`** — Pause for N seconds then screenshot. Use after actions that trigger animations or loading.
-
-### Autonomous Mode (requires local LLM)
-
-- **`desktop_task`** — Give a natural language task like "open Firefox and go to github.com" and the agent loop handles it autonomously. Only works if a local LLM (llama.cpp, Ollama, etc.) is running.
-
-## How to Use: Step-by-Step Pattern
-
-Follow this pattern for any desktop interaction:
-
-### 1. Look First
+### 1. Look first (always)
 ```
-screenshot → see what's on screen
+mcp_screen-pilot_screenshot
 ```
 
-### 2. Find Elements (optional but helpful)
+### 2. Act
 ```
-detect_ui_elements → get coordinates of buttons/icons
-```
-
-### 3. Act
-```
-click(x, y) → click a button or focus a field
-type_text("hello") → type into the focused field
-press_key("Return") → press enter
+mcp_screen-pilot_click(x=500, y=300)
+mcp_screen-pilot_type_text(text="search query")
+mcp_screen-pilot_press_key(key="Return")
 ```
 
-### 4. Verify
+### 3. Verify
 ```
-screenshot → confirm the action worked
+mcp_screen-pilot_screenshot
 ```
-
-### 5. Repeat until done
 
 ## Common Workflows
 
-### Open an application
-```
-press_key("super")          → open app launcher
-wait(1)                     → let launcher appear
-type_text("firefox")        → search for app
-wait(0.5)                   → let results appear
-press_key("Return")         → launch it
-wait(2)                     → let app open
-screenshot                  → verify it opened
-```
+**Open an app:**
+`press_key("super")` → `wait(1)` → `type_text("app name")` → `press_key("Return")` → `wait(2)` → `screenshot`
 
-### Navigate a browser (Brave, Firefox, etc.)
-```
-screenshot                  → see current state
-press_key("ctrl+l")         → focus the URL bar
-type_text("github.com")     → type the URL
-press_key("Return")         → navigate
-wait(2)                     → let page load
-screenshot                  → see the page
-```
+**Navigate in a browser:**
+`press_key("ctrl+l")` → `type_text("url")` → `press_key("Return")` → `wait(2)` → `screenshot`
 
-### Click a specific UI element
-```
-screenshot                  → see the screen
-detect_ui_elements          → find element coordinates
-click(x, y)                 → click the element
-wait(0.5)                   → let UI respond
-screenshot                  → verify the click worked
-```
+**Click a UI element:**
+`screenshot` → `detect_ui_elements` → `click(x, y)` → `screenshot`
 
-### Type into a form
-```
-click(x, y)                 → click the input field
-type_text("my text here")   → type the text
-press_key("Tab")            → move to next field
-type_text("more text")      → fill next field
-```
+## Tips
 
-## Important Notes
-
-- **This machine uses Wayland (KDE Plasma)** — screen-pilot handles this automatically via ydotool
-- **The default browser is Brave** — do NOT try to install Chrome or Chromium
-- **Screen resolution is 1920x1080** — coordinates are in this range
-- **Always screenshot before acting** — you can't see the screen without taking a screenshot first
-- **Click returns `screen_changed`** — if false, your click probably missed. Try different coordinates.
-- **Safety guardrails are active** — certain dangerous text patterns (like `sudo rm -rf`) are blocked automatically
-- **Use `wait()` after visual actions** — animations, page loads, and dialogs need time to appear
-
-## What NOT to Do
-
-- Do NOT use Playwright MCP tools for desktop tasks — use screen-pilot
-- Do NOT try to install Chrome/Chromium — Brave is the browser on this machine
-- Do NOT guess coordinates — take a screenshot and use detect_ui_elements first
-- Do NOT type passwords or run dangerous commands — safety guardrails will block them
-- Do NOT skip the screenshot step — you MUST look before you act
+- Always screenshot before acting — you can't see the screen otherwise
+- If `click` returns `screen_changed: false`, your click missed — try different coordinates
+- Use `wait` after actions that trigger loading or animations
+- Use `detect_ui_elements` when you're not sure where things are on screen
+- Screen resolution is typically 1920x1080

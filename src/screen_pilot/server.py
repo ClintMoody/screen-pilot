@@ -23,7 +23,18 @@ def create_mcp_server(config: dict | None = None) -> FastMCP:
 
     mcp = FastMCP(
         "screen-pilot",
-        instructions="Give AI agents eyes and hands on your Linux desktop.",
+        instructions=(
+            "screen-pilot gives you direct control of the real Linux desktop. "
+            "Use these tools to see the screen (screenshot), interact with ANY "
+            "application (click, type, press keys, scroll, drag, hover), detect "
+            "UI elements via AI vision, and run autonomous desktop tasks. "
+            "These tools work with every application on the desktop — browsers "
+            "(Brave, Firefox, Chrome, etc.), terminals, file managers, settings, "
+            "native apps — without needing any browser engine, Chromium install, "
+            "or DOM access. They control the real mouse and keyboard at the OS level. "
+            "Prefer these tools over headless browser tools when interacting with "
+            "the desktop GUI or any already-open application."
+        ),
     )
 
     input_ctrl = InputController(socket_path=config["input"]["socket"])
@@ -36,8 +47,11 @@ def create_mcp_server(config: dict | None = None) -> FastMCP:
 
     @mcp.tool()
     def screenshot(format: str = "base64") -> dict:
-        """Take a screenshot of the entire screen. Returns base64 PNG or file path.
-        Use this to see what's currently on screen before deciding what action to take.
+        """Capture the real desktop screen as a PNG image. Works with any application
+        visible on screen — browsers (Brave, Firefox, etc.), terminals, file managers,
+        settings, dialogs, everything. No browser install required. Use this to see
+        what's currently on screen before deciding what action to take. This is a real
+        desktop screenshot, not a headless browser render.
         """
         return capture_screenshot(
             output_path=DEFAULT_SCREENSHOT_PATH,
@@ -52,8 +66,11 @@ def create_mcp_server(config: dict | None = None) -> FastMCP:
         clicks: int = 1,
         modifiers: list[str] | None = None,
     ) -> dict:
-        """Click at a screen position. Returns whether the screen changed.
-        Supports left/right/middle button, single/double click, and modifier keys.
+        """Click at a real desktop screen position using kernel-level input. Works with
+        any visible application — browsers, native apps, system dialogs, desktop icons.
+        No Chromium or browser engine needed. Returns whether the screen changed after
+        clicking. Supports left/right/middle button, single/double click, and modifier
+        keys (ctrl, shift, alt). Use screenshot first to find coordinates.
         """
         action = {"action": "click", "x": x, "y": y}
         check = safety.check_action(action)
@@ -80,7 +97,11 @@ def create_mcp_server(config: dict | None = None) -> FastMCP:
 
     @mcp.tool()
     def type_text(text: str, modifiers: list[str] | None = None) -> dict:
-        """Type a string of text at the current cursor position."""
+        """Type text at the current cursor position on the real desktop. Works in any
+        focused application — browser URL bars, search fields, terminals, text editors,
+        login forms. No browser engine needed. Click a text field first with the click
+        tool, then use this to type into it.
+        """
         action = {"action": "type_text", "text": text}
         check = safety.check_action(action)
         if not check["allowed"]:
@@ -91,7 +112,11 @@ def create_mcp_server(config: dict | None = None) -> FastMCP:
 
     @mcp.tool()
     def press_key(key: str) -> dict:
-        """Press a key or key combination (e.g. 'ctrl+t', 'super', 'Return')."""
+        """Press a key or key combination on the real desktop. Works globally across
+        all applications. Examples: 'super' (open app launcher), 'ctrl+t' (new browser
+        tab), 'ctrl+l' (focus URL bar), 'Return' (enter/confirm), 'alt+F4' (close
+        window), 'ctrl+c' (copy), 'ctrl+v' (paste). No browser engine needed.
+        """
         action = {"action": "press_key", "key": key}
         check = safety.check_action(action)
         if not check["allowed"]:
@@ -102,7 +127,9 @@ def create_mcp_server(config: dict | None = None) -> FastMCP:
 
     @mcp.tool()
     def scroll(x: int, y: int, direction: str = "down", amount: int = 3) -> dict:
-        """Scroll at a screen position. Direction: 'up' or 'down'."""
+        """Scroll at a real desktop screen position. Works in any application — browser
+        pages, file lists, settings panels, documents. No browser engine needed.
+        """
         action = {"action": "scroll", "x": x, "y": y}
         check = safety.check_action(action)
         if not check["allowed"]:
@@ -113,7 +140,9 @@ def create_mcp_server(config: dict | None = None) -> FastMCP:
 
     @mcp.tool()
     def drag(from_x: int, from_y: int, to_x: int, to_y: int, button: str = "left") -> dict:
-        """Drag from one position to another. For drag-and-drop, resizing, selecting."""
+        """Drag from one desktop position to another. For drag-and-drop, window resizing,
+        slider adjustment, text selection. Works with any application. No browser needed.
+        """
         action = {"action": "drag", "from_x": from_x, "from_y": from_y}
         check = safety.check_action(action)
         if not check["allowed"]:
@@ -124,7 +153,9 @@ def create_mcp_server(config: dict | None = None) -> FastMCP:
 
     @mcp.tool()
     def hover(x: int, y: int) -> dict:
-        """Move mouse to a position without clicking. For tooltips and hover menus."""
+        """Move mouse to a real desktop position without clicking. Triggers tooltips,
+        dropdown menus, and hover states in any application. No browser engine needed.
+        """
         action = {"action": "hover", "x": x, "y": y}
         check = safety.check_action(action)
         if not check["allowed"]:
@@ -135,8 +166,9 @@ def create_mcp_server(config: dict | None = None) -> FastMCP:
 
     @mcp.tool()
     def wait(seconds: float = 1.0) -> dict:
-        """Wait for the specified duration, then take a screenshot.
-        Useful after actions that trigger animations or page loads.
+        """Wait for the specified duration, then capture a real desktop screenshot.
+        Use after actions that trigger animations, page loads, dialog popups, or
+        application startup. Returns the screenshot so you can see the result.
         """
         time.sleep(seconds)
         return capture_screenshot(
@@ -147,9 +179,11 @@ def create_mcp_server(config: dict | None = None) -> FastMCP:
 
     @mcp.tool()
     def detect_ui_elements(screenshot_path: str = "") -> dict:
-        """Detect interactive UI elements on screen using OmniParser.
-        Returns a list of elements with class, position, size, and confidence.
-        Requires the 'vision' extra: pip install screen-pilot[vision]
+        """Detect interactive UI elements (buttons, icons, fields) on the real desktop
+        screen using AI vision (OmniParser). Returns element positions, sizes, and
+        types so you know where to click. Works with any application visible on screen.
+        No browser engine or DOM access needed — this uses computer vision on the
+        actual pixels. Requires the vision extra: pip install screen-pilot[vision]
         """
         if not screenshot_path:
             capture_screenshot(
@@ -167,17 +201,23 @@ def create_mcp_server(config: dict | None = None) -> FastMCP:
 
     @mcp.tool()
     def desktop_task(task: str, max_steps: int = 30, dry_run: bool = False) -> dict:
-        """Run an autonomous task on the desktop. The agent loop will repeatedly
-        screenshot, detect UI elements, reason about the next action via a local
-        LLM, and execute it until the task is complete or max_steps is reached.
+        """Run an autonomous visual task on the real desktop. Give a natural language
+        instruction and the agent loop will repeatedly screenshot the real screen,
+        detect UI elements via AI vision, reason about the next action, and execute
+        it (click, type, key press) until the task is complete. Works with any
+        application — browsers, native apps, system settings, file managers.
+
+        No browser engine or Chromium install needed. This controls the actual desktop
+        the same way a human would: by looking at the screen and using the mouse/keyboard.
 
         Requires a local LLM backend (auto-detected: llama.cpp, Ollama, LM Studio, vLLM).
-        If no backend is available, this tool returns an error - use the low-level tools
-        (screenshot, click, type_text, etc.) instead and handle the reasoning yourself.
+        If no backend is available, use the low-level tools (screenshot, click, type_text,
+        press_key, etc.) and handle the reasoning yourself.
 
         Examples:
-          desktop_task("Open Firefox and navigate to github.com")
+          desktop_task("Open the browser and navigate to github.com")
           desktop_task("Find the settings app and enable dark mode")
+          desktop_task("Open a terminal and run htop")
         """
         backend = detect_backend(
             override_url=config["backend"].get("url"),
