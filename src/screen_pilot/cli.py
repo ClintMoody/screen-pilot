@@ -225,6 +225,27 @@ def cmd_detect_backend():
         typer.echo("No local LLM backend detected.")
 
 
+@app.command("install")
+def cmd_install():
+    """Interactive TUI installer."""
+    from screen_pilot.tui.install import InstallerApp
+    InstallerApp().run()
+
+
+@app.command("config")
+def cmd_config():
+    """TUI configuration manager."""
+    from screen_pilot.tui.config import ConfigApp
+    ConfigApp().run()
+
+
+@app.command("uninstall")
+def cmd_uninstall():
+    """TUI uninstaller."""
+    from screen_pilot.tui.uninstall import UninstallApp
+    UninstallApp().run()
+
+
 def main():
     app()
 
