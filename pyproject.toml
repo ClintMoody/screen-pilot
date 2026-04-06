@@ -50,3 +50,6 @@ screen-pilot-server = "screen_pilot.server:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/screen_pilot"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

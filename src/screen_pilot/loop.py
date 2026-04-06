@@ -59,11 +59,20 @@ def _execute_action(action: dict, input_ctrl: InputController) -> dict:
     action_type = action.get("action", "")
 
     if action_type == "click":
-        return input_ctrl.click(action.get("x", 0), action.get("y", 0))
+        x, y = action.get("x"), action.get("y")
+        if x is None or y is None:
+            return {"success": False, "error": "LLM response missing 'x' or 'y' for click action"}
+        return input_ctrl.click(int(x), int(y))
     elif action_type == "type":
-        return input_ctrl.type_text(action.get("text", ""))
+        text = action.get("text", "")
+        if not text:
+            return {"success": False, "error": "LLM response missing 'text' for type action"}
+        return input_ctrl.type_text(text)
     elif action_type == "key":
-        return input_ctrl.press_key(action.get("key", ""))
+        key = action.get("key", "")
+        if not key:
+            return {"success": False, "error": "LLM response missing 'key' for key action"}
+        return input_ctrl.press_key(key)
     elif action_type == "scroll":
         direction = action.get("text", action.get("direction", "down"))
         return input_ctrl.scroll(action.get("x", 0), action.get("y", 0), direction)

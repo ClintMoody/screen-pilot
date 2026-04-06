@@ -1,11 +1,17 @@
 """Screenshot capture for Wayland and X11."""
 
 import base64
+import glob
+import os
 import shutil
 import subprocess
+import time
 from pathlib import Path
 
 DEFAULT_SCREENSHOT_PATH = "/tmp/screen-pilot-screenshot.png"
+_CLEANUP_INTERVAL = 300  # seconds between cleanup runs
+_SCREENSHOT_MAX_AGE = 3600  # delete screenshots older than 1 hour
+_last_cleanup = 0.0
 
 TOOL_COMMANDS = {
     "spectacle": ["spectacle", "--background", "--nonotify", "--fullscreen", "--output"],
@@ -48,4 +54,21 @@ def capture_screenshot(
     if format == "base64":
         with open(output_path, "rb") as f:
             result["base64"] = base64.b64encode(f.read()).decode("utf-8")
+
+    _cleanup_old_screenshots()
     return result
+
+
+def _cleanup_old_screenshots() -> None:
+    """Periodically remove old screenshot files from /tmp."""
+    global _last_cleanup
+    now = time.time()
+    if now - _last_cleanup < _CLEANUP_INTERVAL:
+        return
+    _last_cleanup = now
+    for f in glob.glob("/tmp/sp-*.png"):
+        try:
+            if now - os.path.getmtime(f) > _SCREENSHOT_MAX_AGE:
+                os.unlink(f)
+        except OSError:
+            pass

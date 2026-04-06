@@ -14,9 +14,9 @@ class SafetyEngine:
         action_type = action.get("action", "")
 
         if action_type == "type_text":
-            text = action.get("text", "")
+            text = action.get("text", "").lower()
             for pattern in self.blocked_patterns:
-                if pattern in text:
+                if pattern.lower() in text:
                     return {"allowed": False, "reason": f"Blocked pattern detected: '{pattern}'"}
 
         if action_type in ("click", "drag", "hover", "scroll"):

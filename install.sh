@@ -242,6 +242,12 @@ ok "Python packages installed"
 info "Installing systemd service..."
 mkdir -p "${HOME}/.config/systemd/user"
 cp "$INSTALL_DIR/screen-pilot.service" "${HOME}/.config/systemd/user/"
+# Patch WAYLAND_DISPLAY to match current session
+WAYLAND_SOCK="${WAYLAND_DISPLAY:-wayland-0}"
+sed -i "s/WAYLAND_DISPLAY=wayland-0/WAYLAND_DISPLAY=${WAYLAND_SOCK}/" "${HOME}/.config/systemd/user/screen-pilot.service"
+# Patch UID in XDG_RUNTIME_DIR and YDOTOOL_SOCKET
+CURRENT_UID=$(id -u)
+sed -i "s|/run/user/1000|/run/user/${CURRENT_UID}|g" "${HOME}/.config/systemd/user/screen-pilot.service"
 systemctl --user daemon-reload
 systemctl --user enable screen-pilot
 ok "Service installed (run 'screen-pilot up' to start)"

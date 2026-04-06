@@ -1,5 +1,7 @@
 """screen-pilot MCP server with HTTP API."""
 
+import asyncio
+import os
 import time
 
 from fastmcp import FastMCP
@@ -13,6 +15,13 @@ from screen_pilot.safety import SafetyEngine
 from screen_pilot.backend import detect_backend
 
 from PIL import Image
+
+
+def _validate_coords(x: int, y: int) -> dict | None:
+    """Validate screen coordinates. Returns error dict if invalid, None if OK."""
+    if x < 0 or y < 0:
+        return {"success": False, "error": f"Coordinates must be non-negative, got ({x}, {y})"}
+    return None
 
 
 def create_mcp_server(config: dict | None = None) -> FastMCP:
@@ -72,6 +81,9 @@ def create_mcp_server(config: dict | None = None) -> FastMCP:
         clicking. Supports left/right/middle button, single/double click, and modifier
         keys (ctrl, shift, alt). Use screenshot first to find coordinates.
         """
+        err = _validate_coords(x, y)
+        if err:
+            return err
         action = {"action": "click", "x": x, "y": y}
         check = safety.check_action(action)
         if not check["allowed"]:
@@ -80,7 +92,6 @@ def create_mcp_server(config: dict | None = None) -> FastMCP:
         if safety.is_dry_run:
             return {"success": True, "dry_run": True, "action": f"click ({x},{y})"}
 
-        # Before screenshot
         capture_screenshot(output_path="/tmp/sp-before.png", tool=config["capture"]["tool"])
         before = Image.open("/tmp/sp-before.png")
 
@@ -88,7 +99,6 @@ def create_mcp_server(config: dict | None = None) -> FastMCP:
 
         time.sleep(config["safety"]["min_action_delay"])
 
-        # After screenshot
         capture_screenshot(output_path="/tmp/sp-after.png", tool=config["capture"]["tool"])
         after = Image.open("/tmp/sp-after.png")
 
@@ -130,6 +140,9 @@ def create_mcp_server(config: dict | None = None) -> FastMCP:
         """Scroll at a real desktop screen position. Works in any application — browser
         pages, file lists, settings panels, documents. No browser engine needed.
         """
+        err = _validate_coords(x, y)
+        if err:
+            return err
         action = {"action": "scroll", "x": x, "y": y}
         check = safety.check_action(action)
         if not check["allowed"]:
@@ -143,6 +156,12 @@ def create_mcp_server(config: dict | None = None) -> FastMCP:
         """Drag from one desktop position to another. For drag-and-drop, window resizing,
         slider adjustment, text selection. Works with any application. No browser needed.
         """
+        err = _validate_coords(from_x, from_y)
+        if err:
+            return err
+        err = _validate_coords(to_x, to_y)
+        if err:
+            return err
         action = {"action": "drag", "from_x": from_x, "from_y": from_y}
         check = safety.check_action(action)
         if not check["allowed"]:
@@ -156,6 +175,9 @@ def create_mcp_server(config: dict | None = None) -> FastMCP:
         """Move mouse to a real desktop position without clicking. Triggers tooltips,
         dropdown menus, and hover states in any application. No browser engine needed.
         """
+        err = _validate_coords(x, y)
+        if err:
+            return err
         action = {"action": "hover", "x": x, "y": y}
         check = safety.check_action(action)
         if not check["allowed"]:
@@ -165,12 +187,16 @@ def create_mcp_server(config: dict | None = None) -> FastMCP:
         return input_ctrl.hover(x, y)
 
     @mcp.tool()
-    def wait(seconds: float = 1.0) -> dict:
+    async def wait(seconds: float = 1.0) -> dict:
         """Wait for the specified duration, then capture a real desktop screenshot.
         Use after actions that trigger animations, page loads, dialog popups, or
         application startup. Returns the screenshot so you can see the result.
         """
-        time.sleep(seconds)
+        if seconds < 0:
+            return {"success": False, "error": "Wait seconds must be non-negative"}
+        if seconds > 60:
+            seconds = 60
+        await asyncio.sleep(seconds)
         return capture_screenshot(
             output_path=DEFAULT_SCREENSHOT_PATH,
             tool=config["capture"]["tool"],
@@ -250,7 +276,7 @@ def create_mcp_server(config: dict | None = None) -> FastMCP:
 
 
 def create_http_app(config: dict | None = None):
-    """Create FastAPI app wrapping MCP tools as HTTP endpoints, with MCP SSE mounted."""
+    """Create FastAPI app wrapping MCP tools as HTTP endpoints, with MCP mounted."""
     from fastapi import FastAPI
 
     if config is None:
@@ -262,7 +288,6 @@ def create_http_app(config: dict | None = None):
 
     # FastAPI must use the MCP app's lifespan for session management
     http_app = FastAPI(title="screen-pilot", version="0.1.0", lifespan=mcp_http_app.lifespan)
-    # Mount MCP at /mcp — the internal route is "/" so it's accessible at /mcp
     http_app.mount("/mcp", mcp_http_app)
 
     input_ctrl = InputController(socket_path=config["input"]["socket"])
@@ -282,7 +307,11 @@ def create_http_app(config: dict | None = None):
 
     @http_app.post("/api/click")
     async def api_click(body: dict):
-        action = {"action": "click", "x": body.get("x", 0), "y": body.get("y", 0)}
+        x, y = body.get("x", 0), body.get("y", 0)
+        err = _validate_coords(x, y)
+        if err:
+            return err
+        action = {"action": "click", "x": x, "y": y}
         check = safety.check_action(action)
         if not check["allowed"]:
             return {"success": False, "error": check["reason"]}
@@ -292,12 +321,7 @@ def create_http_app(config: dict | None = None):
         capture_screenshot(output_path="/tmp/sp-before.png", tool=config["capture"]["tool"])
         before = Image.open("/tmp/sp-before.png")
 
-        result = input_ctrl.click(
-            body.get("x", 0), body.get("y", 0),
-            body.get("button", "left"),
-            body.get("clicks", 1),
-            body.get("modifiers"),
-        )
+        result = input_ctrl.click(x, y, body.get("button", "left"), body.get("clicks", 1), body.get("modifiers"))
 
         time.sleep(config["safety"]["min_action_delay"])
 
@@ -339,7 +363,8 @@ def create_http_app(config: dict | None = None):
 
     @http_app.post("/api/wait")
     async def api_wait(body: dict = {}):
-        time.sleep(body.get("seconds", 1.0))
+        seconds = max(0, min(body.get("seconds", 1.0), 60))
+        await asyncio.sleep(seconds)
         return capture_screenshot(tool=config["capture"]["tool"], format="base64")
 
     @http_app.post("/api/detect_ui_elements")
