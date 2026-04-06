@@ -51,7 +51,7 @@ screen-pilot up
 **Connect your agent:**
 
 ```bash
-claude mcp add screen-pilot --transport sse http://localhost:7222/mcp/sse
+claude mcp add screen-pilot --transport sse http://localhost:7222/mcp
 ```
 
 That's it. Your agent can now see and control your desktop.
@@ -142,13 +142,13 @@ screen-pilot running (port 7222)
 ### Claude Code
 
 ```bash
-claude mcp add screen-pilot --transport sse http://localhost:7222/mcp/sse
+claude mcp add screen-pilot --transport sse http://localhost:7222/mcp
 ```
 
 ### Codex
 
 ```bash
-codex mcp add screen-pilot --transport sse http://localhost:7222/mcp/sse
+codex mcp add screen-pilot --transport sse http://localhost:7222/mcp
 ```
 
 ### OpenCode
@@ -159,7 +159,7 @@ Add to `~/.config/opencode/config.json`:
 {
   "mcpServers": {
     "screen-pilot": {
-      "url": "http://localhost:7222/mcp/sse"
+      "url": "http://localhost:7222/mcp"
     }
   }
 }

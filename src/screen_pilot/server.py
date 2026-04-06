@@ -256,14 +256,14 @@ def create_http_app(config: dict | None = None):
     if config is None:
         config = load_config()
 
-    http_app = FastAPI(title="screen-pilot", version="0.1.0")
-
-    # Mount the MCP server with SSE transport
-    # FastMCP's http_app creates routes at `path` (for SSE) and `/messages` (for POST)
-    # Mount at root so /mcp/sse and /mcp/messages are accessible
+    # Create MCP server with streamable-http transport
     mcp = create_mcp_server(config)
-    mcp_sse_app = mcp.http_app(path="/sse", transport="sse")
-    http_app.mount("/mcp", mcp_sse_app)
+    mcp_http_app = mcp.http_app(path="/", transport="streamable-http")
+
+    # FastAPI must use the MCP app's lifespan for session management
+    http_app = FastAPI(title="screen-pilot", version="0.1.0", lifespan=mcp_http_app.lifespan)
+    # Mount MCP at /mcp — the internal route is "/" so it's accessible at /mcp
+    http_app.mount("/mcp", mcp_http_app)
 
     input_ctrl = InputController(socket_path=config["input"]["socket"])
     safety = SafetyEngine(config["safety"])
