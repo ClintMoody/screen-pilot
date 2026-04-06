@@ -250,13 +250,20 @@ def create_mcp_server(config: dict | None = None) -> FastMCP:
 
 
 def create_http_app(config: dict | None = None):
-    """Create FastAPI app wrapping MCP tools as HTTP endpoints."""
+    """Create FastAPI app wrapping MCP tools as HTTP endpoints, with MCP SSE mounted."""
     from fastapi import FastAPI
 
     if config is None:
         config = load_config()
 
     http_app = FastAPI(title="screen-pilot", version="0.1.0")
+
+    # Mount the MCP server with SSE transport
+    # FastMCP's http_app creates routes at `path` (for SSE) and `/messages` (for POST)
+    # Mount at root so /mcp/sse and /mcp/messages are accessible
+    mcp = create_mcp_server(config)
+    mcp_sse_app = mcp.http_app(path="/sse", transport="sse")
+    http_app.mount("/mcp", mcp_sse_app)
 
     input_ctrl = InputController(socket_path=config["input"]["socket"])
     safety = SafetyEngine(config["safety"])
