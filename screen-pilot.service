@@ -1,0 +1,18 @@
+[Unit]
+Description=screen-pilot MCP server
+Documentation=https://github.com/clintm/screen-pilot
+After=network.target ydotool.service
+Wants=ydotool.service
+
+[Service]
+Type=simple
+ExecStart=%h/miniconda3/envs/screen-pilot/bin/screen-pilot-server
+Restart=on-failure
+RestartSec=5
+Environment=DISPLAY=:0
+Environment=WAYLAND_DISPLAY=wayland-0
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+Environment=YDOTOOL_SOCKET=/run/user/1000/.ydotool_socket
+
+[Install]
+WantedBy=default.target
