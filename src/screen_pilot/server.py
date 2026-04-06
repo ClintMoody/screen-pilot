@@ -6,7 +6,7 @@ import time
 
 from fastmcp import FastMCP
 
-from screen_pilot.capture import capture_screenshot, DEFAULT_SCREENSHOT_PATH
+from screen_pilot.capture import capture_screenshot, cleanup_all_screenshots, DEFAULT_SCREENSHOT_PATH
 from screen_pilot.config import load_config
 from screen_pilot.detect import OmniParserDetector
 from screen_pilot.diff import screenshots_differ
@@ -420,8 +420,14 @@ def create_http_app(config: dict | None = None):
 
 def main():
     """Entry point for screen-pilot-server."""
+    import atexit
+    import signal
     import sys
     import uvicorn
+
+    # Clean up screenshot files on shutdown
+    atexit.register(cleanup_all_screenshots)
+    signal.signal(signal.SIGTERM, lambda *_: (cleanup_all_screenshots(), sys.exit(0)))
 
     config = load_config()
 

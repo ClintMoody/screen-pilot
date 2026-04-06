@@ -54,21 +54,40 @@ def capture_screenshot(
     if format == "base64":
         with open(output_path, "rb") as f:
             result["base64"] = base64.b64encode(f.read()).decode("utf-8")
+        # Delete the file immediately after encoding - caller has the data
+        try:
+            os.unlink(output_path)
+        except OSError:
+            pass
 
     _cleanup_old_screenshots()
     return result
 
 
+def cleanup_all_screenshots() -> int:
+    """Remove all screen-pilot screenshot files. Returns count deleted."""
+    count = 0
+    for pattern in ["/tmp/sp-*.png", "/tmp/screen-pilot-*.png"]:
+        for f in glob.glob(pattern):
+            try:
+                os.unlink(f)
+                count += 1
+            except OSError:
+                pass
+    return count
+
+
 def _cleanup_old_screenshots() -> None:
-    """Periodically remove old screenshot files from /tmp."""
+    """Periodically remove screenshot files older than 1 hour."""
     global _last_cleanup
     now = time.time()
     if now - _last_cleanup < _CLEANUP_INTERVAL:
         return
     _last_cleanup = now
-    for f in glob.glob("/tmp/sp-*.png"):
-        try:
-            if now - os.path.getmtime(f) > _SCREENSHOT_MAX_AGE:
-                os.unlink(f)
-        except OSError:
-            pass
+    for pattern in ["/tmp/sp-*.png", "/tmp/screen-pilot-*.png"]:
+        for f in glob.glob(pattern):
+            try:
+                if now - os.path.getmtime(f) > _SCREENSHOT_MAX_AGE:
+                    os.unlink(f)
+            except OSError:
+                pass
