@@ -227,23 +227,18 @@ def create_mcp_server(config: dict | None = None) -> FastMCP:
 
     @mcp.tool()
     def desktop_task(task: str, max_steps: int = 30, dry_run: bool = False) -> dict:
-        """Run an autonomous visual task on the real desktop. Give a natural language
-        instruction and the agent loop will repeatedly screenshot the real screen,
-        detect UI elements via AI vision, reason about the next action, and execute
-        it (click, type, key press) until the task is complete. Works with any
-        application — browsers, native apps, system settings, file managers.
+        """ADVANCED: Run an autonomous task using a LOCAL LLM to drive the loop.
+        This is an experimental feature that requires a local LLM server running.
 
-        No browser engine or Chromium install needed. This controls the actual desktop
-        the same way a human would: by looking at the screen and using the mouse/keyboard.
+        IMPORTANT: For most tasks, you should use the individual tools directly instead:
+        1. screenshot() - see the screen
+        2. press_key("super") - open app launcher
+        3. type_text("brave") - search for app
+        4. press_key("Return") - launch it
+        5. screenshot() - verify it opened
 
-        Requires a local LLM backend (auto-detected: llama.cpp, Ollama, LM Studio, vLLM).
-        If no backend is available, use the low-level tools (screenshot, click, type_text,
-        press_key, etc.) and handle the reasoning yourself.
-
-        Examples:
-          desktop_task("Open the browser and navigate to github.com")
-          desktop_task("Find the settings app and enable dark mode")
-          desktop_task("Open a terminal and run htop")
+        Only use desktop_task for fire-and-forget automation where you don't need
+        to see intermediate results. For interactive tasks, use the individual tools.
         """
         backend = detect_backend(
             override_url=config["backend"].get("url"),
