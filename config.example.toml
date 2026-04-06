@@ -1,0 +1,38 @@
+[server]
+host = "127.0.0.1"
+port = 7222
+
+[capture]
+# Auto-detected. Override: "spectacle", "grim", "maim"
+tool = "auto"
+
+[input]
+# ydotoold socket path
+socket = "/run/user/1000/.ydotool_socket"
+
+[omniparser]
+weights_dir = "~/.local/share/screen-pilot/weights"
+auto_download = true
+idle_unload_seconds = 60
+device = "auto"
+
+[backend]
+# Auto-detected. Override with explicit URL.
+# url = "http://localhost:8081/v1/chat/completions"
+# model = "nemotron-cascade"
+
+[safety]
+max_steps_per_task = 30
+min_action_delay = 0.5
+confirm_actions = []
+emergency_stop = "ctrl+shift+escape"
+dry_run = false
+
+[safety.blocked_regions]
+regions = []
+
+[safety.blocked_patterns]
+patterns = ["sudo rm -rf", ":(){ :|:&", "dd if="]
+
+[safety.allowed_apps]
+window_titles = []
